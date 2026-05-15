@@ -186,6 +186,7 @@ for x, y in dataloader:
 
 ```
 OpenGNS/
+├── gns-utils.py                    # Shared utilities (GNS estimator) 
 └── plots/
     ├── cbs_gns_plots/              # GNS vs. Critical Batch Size plots
     │   ├── plot_CBS_GNS_joint_cv.ipynb
