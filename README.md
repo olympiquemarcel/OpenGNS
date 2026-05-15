@@ -2,7 +2,6 @@
 
 **An Open Dataset of the Gradient Noise Scale across Vision, Language, and Diffusion Models**
 
----
 
 ## Overview
 
@@ -32,7 +31,29 @@ The dataset is hosted on [Hugging Face](https://huggingface.co/datasets/olympiqu
 | Optimizer | AdamW | AdamW | AdamW |
 | LR schedule | Cosine (epoch) | Cosine (step) | Constant |
 
-All models were trained on the **Leonardo Booster HPC** (NVIDIA A100 GPUs, InfiniBand interconnect), consuming approximately **200,000 GPU hours** in total.
+## Quick Start
+
+```python
+import pandas as pd
+
+# Load a dataset
+cv   = pd.read_parquet("cv.parquet")        
+nlp  = pd.read_parquet("nlp.parquet")
+diff = pd.read_parquet("diffusion.parquet")
+
+# Filter to a single run (model size + batch size + learning rate)
+run = nlp[(nlp["width"] == 1024) & (nlp["batch_size"] == 2**20) & (nlp["peak_lr"] == 2**-7)]
+
+# Plot GNS over training
+import matplotlib.pyplot as plt
+plt.plot(run["samples_seen"], run["gns"])
+plt.xlabel("Tokens seen")
+plt.ylabel("GNS")
+plt.show()
+```
+
+![GNS over training (GPT/FineWeb)](assets/nlp.png)
+---
 
 ### Files and Columns
 
@@ -89,30 +110,6 @@ GNS (B_simple) = gns_var / gns_norm = tr(Σ) / |G|²
 
 `gns` is the smoothed GNS estimate. `gns_norm` and `gns_var` are the raw components, released separately so users can reconstruct or study them independently.
 
----
-
-## Quick Start
-
-```python
-import pandas as pd
-
-# Load a dataset
-cv   = pd.read_parquet("cv.parquet")        
-nlp  = pd.read_parquet("nlp.parquet")
-diff = pd.read_parquet("diffusion.parquet")
-
-# Filter to a single run (model size + batch size + learning rate)
-run = nlp[(nlp["width"] == 1024) & (nlp["batch_size"] == 2**20) & (nlp["peak_lr"] == 2**-7)]
-
-# Plot GNS over training
-import matplotlib.pyplot as plt
-plt.plot(run["samples_seen"], run["gns"])
-plt.xlabel("Tokens seen")
-plt.ylabel("GNS")
-plt.show()
-```
-
-![GNS over training (GPT/FineWeb)](assets/nlp.png)
 ---
 
 ## Repository Structure
