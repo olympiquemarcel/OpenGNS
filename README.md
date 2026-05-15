@@ -121,6 +121,65 @@ The training code for each workload is based on the following open-source reposi
 - **ResNet (muP):** [microsoft/mup — ResNet example](https://github.com/microsoft/mup/tree/main/examples/ResNet)  
   The official muP ResNet example from Microsoft, used as the basis for the vision classification experiments on CIFAR-10 with ResNet18.
 
+
+---
+
+## Using `gns_utils.py` in Your Own Training Loop
+
+`gns_utils.py` provides two classes that together measure the **Gradient Noise Scale** during DDP training.
+
+| Class | Role |
+|---|---|
+| `GradientNoiseScaleHook` | Hooks into DDP's gradient communication to capture per-GPU and global gradient squared norms each step |
+| `GradientNoiseScale` | Accumulates those norms into an EMA and computes `GNS = tr(Σ) / ‖G‖²` |
+
+### Minimal Example
+
+```python
+import torch
+import torch.distributed as dist
+from torch.nn.parallel import DistributedDataParallel as DDP
+import gns_utils
+
+# 1. Wrap your model in DDP first — the hook requires a DDP module
+dist.init_process_group("nccl")
+model = MyModel().to(device)
+model = DDP(model, device_ids=[device])
+
+# 2. Attach the communication hook (must happen after DDP wrapping)
+gns_hook = gns_utils.GradientNoiseScaleHook(model)
+
+# 3. Create the EMA tracker (beta controls smoothing; 0.995 is a good default)
+gns_stats = gns_utils.GradientNoiseScale(beta=0.995)
+
+# Training loop
+for x, y in dataloader:
+    loss = compute_loss(model, x, y)
+    optimizer.zero_grad()
+    loss.backward()
+
+    # 4. After backward, before optimizer.step — collect gradient norms
+    #    get_stats() returns (sq_norm_small_batch, sq_norm_large_batch)
+    #    and resets the hook's internal buffers for the next step
+    sq_norm_small, sq_norm_large = gns_hook.get_stats()
+
+    n_small = x.shape[0]                          # per-GPU batch size
+    n_large = x.shape[0] * dist.get_world_size()  # global batch size
+
+    gns_stats.update(sq_norm_small, sq_norm_large, n_small, n_large)
+
+    optimizer.step()
+
+    # 5. Read out the current GNS and its components
+    gns = gns_stats.get_gns()                        # B_simple = tr(Σ) / ‖G‖²
+    grad_norm, grad_var = gns_stats.get_stats()      # debiased ‖G‖² and tr(Σ)
+    print(f"GNS: {gns:.3f}  |G|²: {grad_norm:.3f}  tr(Σ): {grad_var:.3f}")
+```
+
+### Notes
+
+- `GradientNoiseScaleHook` **requires a DDP-wrapped model**; it will raise `ValueError` on plain `nn.Module`.
+- `get_stats()` on the hook internally calls `all_reduce` across ranks and resets buffers — call it exactly once per step, after `loss.backward()`.
 ---
 
 ## Repository Structure
