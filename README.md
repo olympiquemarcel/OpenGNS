@@ -112,6 +112,7 @@ plt.ylabel("GNS")
 plt.show()
 ```
 
+![GNS over training (GPT/FineWeb)](assets/nlp.png)
 ---
 
 ## Repository Structure
