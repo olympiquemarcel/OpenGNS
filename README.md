@@ -35,18 +35,14 @@ The dataset is hosted on [Hugging Face](https://huggingface.co/datasets/olympiqu
 
 ```python
 import pandas as pd
-
-# Load a dataset
-cv   = pd.read_parquet("cv.parquet")        
-nlp  = pd.read_parquet("nlp.parquet")
-diff = pd.read_parquet("diffusion.parquet")
-
-# Filter to a single run (model size + batch size + learning rate)
-run = nlp[(nlp["width"] == 1024) & (nlp["batch_size"] == 2**20) & (nlp["peak_lr"] == 2**-7)]
-
-# Plot GNS over training
 import matplotlib.pyplot as plt
-plt.plot(run["samples_seen"], run["gns"])
+
+nlp = pd.read_parquet("nlp.parquet")
+
+SEQUENCE_LENGTH = 1024
+run = nlp[(nlp["width"] == 1024) & (nlp["batch_size"] == 1024) & (nlp["peak_lr"] == 2**-7)]
+
+plt.plot(run["samples_seen"] * SEQUENCE_LENGTH, run["gns"])
 plt.xlabel("Tokens seen")
 plt.ylabel("GNS")
 plt.show()
@@ -109,6 +105,21 @@ GNS (B_simple) = gns_var / gns_norm = tr(Σ) / |G|²
 ```
 
 `gns` is the smoothed GNS estimate. `gns_norm` and `gns_var` are the raw components, released separately so users can reconstruct or study them independently.
+
+---
+
+### Training Code
+
+The training code for each workload is based on the following open-source repositories, all adapted to use Maximal Update Parameterization (muP) for hyperparameter transfer across model scales.
+
+- **GPT (muP):** [EleutherAI/nanoGPT-mup](https://github.com/EleutherAI/nanoGPT-mup)  
+  A muP-adapted fork of nanoGPT used for the language modeling experiments on FineWeb. GNS measurements were added to the training loop on top of this codebase.
+
+- **DiT (muP):** [ML-GSAI/Scaling-Diffusion-Transformers-muP](https://github.com/ML-GSAI/Scaling-Diffusion-Transformers-muP)  
+  A muP-adapted Diffusion Transformer (DiT) implementation used for the image generation experiments on ImageNet. GNS tracking was integrated into this training setup.
+
+- **ResNet (muP):** [microsoft/mup — ResNet example](https://github.com/microsoft/mup/tree/main/examples/ResNet)  
+  The official muP ResNet example from Microsoft, used as the basis for the vision classification experiments on CIFAR-10 with ResNet18.
 
 ---
 
