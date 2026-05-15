@@ -80,12 +80,12 @@ plt.show()
 | `gns` / `gns_norm` / `gns_var` | GNS and its components |
 | `train/loss` / `val/loss` | Losses |
 | `width` | Model width (256, 512, 1024, 2048, 2560) |
-| `batch_size` | Global batch size (tokens) |
+| `batch_size` | Global batch size |
 | `peak_lr` | Peak learning rate hyperparameter |
 | `lr` | Instantaneous learning rate (varies with cosine schedule) |
 | `lr_schedule` | LR schedule type (`cosine`) |
 | `seed` | Random seed |
-| `samples_seen` | Total training tokens processed |
+| `samples_seen` | Total training samples processed (multiply by sequence length 1024 to get in tokens) |
 
 **`diffusion.parquet`** — 265K rows, DiT on ImageNet
 
